@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EditCustomerProfileInput = exports.UserLoginInput = exports.CreateCustomerInput = void 0;
+exports.CreateDeliveryUserInput = exports.OrderInputs = exports.CartItem = exports.EditCustomerProfileInput = exports.UserLoginInput = exports.CreateCustomerInput = void 0;
 var class_validator_1 = require("class-validator");
 var CreateCustomerInput = /** @class */ (function () {
     function CreateCustomerInput() {
@@ -61,4 +61,50 @@ var EditCustomerProfileInput = /** @class */ (function () {
     return EditCustomerProfileInput;
 }());
 exports.EditCustomerProfileInput = EditCustomerProfileInput;
+var CartItem = /** @class */ (function () {
+    function CartItem() {
+    }
+    return CartItem;
+}());
+exports.CartItem = CartItem;
+var OrderInputs = /** @class */ (function () {
+    function OrderInputs() {
+    }
+    return OrderInputs;
+}());
+exports.OrderInputs = OrderInputs;
+var CreateDeliveryUserInput = /** @class */ (function () {
+    function CreateDeliveryUserInput() {
+    }
+    __decorate([
+        (0, class_validator_1.IsEmail)(),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "email", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(7, 12),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "phone", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(6, 12),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "password", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(3, 12),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "firstName", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(3, 12),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "lastName", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(6, 24),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "address", void 0);
+    __decorate([
+        (0, class_validator_1.Length)(4, 12),
+        __metadata("design:type", String)
+    ], CreateDeliveryUserInput.prototype, "pincode", void 0);
+    return CreateDeliveryUserInput;
+}());
+exports.CreateDeliveryUserInput = CreateDeliveryUserInput;
 //# sourceMappingURL=Customer.dto.js.map

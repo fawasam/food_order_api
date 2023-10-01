@@ -52,6 +52,7 @@ exports.default = (function (app) { return __awaiter(void 0, void 0, void 0, fun
         app.use("/admin", routes_1.AdminRoute);
         app.use("/vendor", routes_1.VendorRoute);
         app.use("/customer", routes_1.CustomerRoute);
+        app.use("/delivery", routes_1.DeliveryRoute);
         app.use(routes_1.ShoppingRoute);
         return [2 /*return*/, app];
     });

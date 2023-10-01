@@ -148,8 +148,21 @@ var RestaurantById = function (req, res, next) { return __awaiter(void 0, void 0
     });
 }); };
 exports.RestaurantById = RestaurantById;
-var GetAvailableOffers = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () { return __generator(this, function (_a) {
-    return [2 /*return*/];
-}); }); };
+var GetAvailableOffers = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var pincode, offers;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                pincode = req.params.pincode;
+                return [4 /*yield*/, models_1.Offer.find({ pincode: pincode, isActive: true })];
+            case 1:
+                offers = _a.sent();
+                if (offers) {
+                    return [2 /*return*/, res.status(200).json(offers)];
+                }
+                return [2 /*return*/, res.json({ message: "Offers not Found!" })];
+        }
+    });
+}); };
 exports.GetAvailableOffers = GetAvailableOffers;
 //# sourceMappingURL=ShoppingController.js.map

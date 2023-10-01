@@ -36,10 +36,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetFoods = exports.AddFood = exports.UpdateVendorService = exports.UpdateVendorCoverImage = exports.UpdateVendorProfile = exports.GetVendorProfile = exports.VendorLogin = void 0;
+exports.EditOffer = exports.AddOffer = exports.GetOffers = exports.ProcessOrder = exports.GetOrderDetails = exports.GetCurrentOrders = exports.GetFoods = exports.AddFood = exports.UpdateVendorService = exports.UpdateVendorCoverImage = exports.UpdateVendorProfile = exports.GetVendorProfile = exports.VendorLogin = void 0;
 var AdminController_1 = require("./AdminController");
 var utility_1 = require("../utility");
 var models_1 = require("../models");
+//VENDOR PROFILE CONTROLLER
 var VendorLogin = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
     var _a, email, password, existingUser, validation, signature;
     return __generator(this, function (_b) {
@@ -133,38 +134,47 @@ var UpdateVendorCoverImage = function (req, res, next) { return __awaiter(void 0
 }); };
 exports.UpdateVendorCoverImage = UpdateVendorCoverImage;
 var UpdateVendorService = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var user, existingVendor, saveResult;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var user, _a, lat, lng, existingVendor, saveResult;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
                 user = req.user;
+                _a = req.body, lat = _a.lat, lng = _a.lng;
                 if (!user) return [3 /*break*/, 3];
                 return [4 /*yield*/, (0, AdminController_1.FindVendor)(user._id)];
             case 1:
-                existingVendor = _a.sent();
+                existingVendor = _b.sent();
                 if (!(existingVendor !== null)) return [3 /*break*/, 3];
                 existingVendor.serviceAvailable = !existingVendor.serviceAvailable;
+                if (lat && lng) {
+                    existingVendor.lat = lat;
+                    existingVendor.lng = lng;
+                }
                 return [4 /*yield*/, existingVendor.save()];
             case 2:
-                saveResult = _a.sent();
+                saveResult = _b.sent();
                 return [2 /*return*/, res.json(saveResult)];
             case 3: return [2 /*return*/, res.json({ message: "Vendor Information Not Found" })];
         }
     });
 }); };
 exports.UpdateVendorService = UpdateVendorService;
+//FOOD CONTROLLER
 var AddFood = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var user, _a, name, description, category, foodType, readyTime, price, vendor, files, images, createFood, result;
+    var user, _a, name, description, category, foodType, readyTime, price, vendor, files, images, createFood, result, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 user = req.user;
                 _a = req.body, name = _a.name, description = _a.description, category = _a.category, foodType = _a.foodType, readyTime = _a.readyTime, price = _a.price;
-                if (!user) return [3 /*break*/, 4];
+                if (!user) return [3 /*break*/, 6];
                 return [4 /*yield*/, (0, AdminController_1.FindVendor)(user._id)];
             case 1:
                 vendor = _b.sent();
-                if (!(vendor !== null)) return [3 /*break*/, 4];
+                if (!(vendor !== null)) return [3 /*break*/, 6];
+                _b.label = 2;
+            case 2:
+                _b.trys.push([2, 5, , 6]);
                 files = req.files;
                 images = files.map(function (file) { return file.filename; });
                 return [4 /*yield*/, models_1.Food.create({
@@ -178,14 +188,17 @@ var AddFood = function (req, res, next) { return __awaiter(void 0, void 0, void 
                         foodType: foodType,
                         images: images,
                     })];
-            case 2:
+            case 3:
                 createFood = _b.sent();
                 vendor.foods.push(createFood);
                 return [4 /*yield*/, vendor.save()];
-            case 3:
+            case 4:
                 result = _b.sent();
                 return [2 /*return*/, res.json(result)];
-            case 4: return [2 /*return*/, res.json({ message: "Something went wrong with add food" })];
+            case 5:
+                error_1 = _b.sent();
+                return [2 /*return*/, res.json(error_1)];
+            case 6: return [2 /*return*/, res.json({ message: "Something went wrong with add food" })];
         }
     });
 }); };
@@ -209,4 +222,177 @@ var GetFoods = function (req, res, next) { return __awaiter(void 0, void 0, void
     });
 }); };
 exports.GetFoods = GetFoods;
+//ORDER CONTROLLER
+var GetCurrentOrders = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var user, orders;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                user = req.user;
+                if (!user) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Order.find({ vendorId: user._id }).populate("items.food")];
+            case 1:
+                orders = _a.sent();
+                if (orders != null) {
+                    return [2 /*return*/, res.status(200).json(orders)];
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.json({ message: "Orders Not found" })];
+        }
+    });
+}); };
+exports.GetCurrentOrders = GetCurrentOrders;
+var GetOrderDetails = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var orderId, order;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                orderId = req.params.id;
+                if (!orderId) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Order.findById(orderId).populate("items.food")];
+            case 1:
+                order = _a.sent();
+                if (order != null) {
+                    return [2 /*return*/, res.status(200).json(order)];
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.json({ message: "Order Not found" })];
+        }
+    });
+}); };
+exports.GetOrderDetails = GetOrderDetails;
+var ProcessOrder = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var orderId, _a, status, remarks, time, order, orderResult;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                orderId = req.params.id;
+                _a = req.body, status = _a.status, remarks = _a.remarks, time = _a.time;
+                if (!orderId) return [3 /*break*/, 3];
+                return [4 /*yield*/, models_1.Order.findById(orderId).populate("items.food")];
+            case 1:
+                order = _b.sent();
+                order.orderStatus = status;
+                order.remarks = remarks;
+                if (time) {
+                    order.readyTime = time;
+                }
+                return [4 /*yield*/, order.save()];
+            case 2:
+                orderResult = _b.sent();
+                if (orderResult != null) {
+                    return [2 /*return*/, res.status(200).json(orderResult)];
+                }
+                _b.label = 3;
+            case 3: return [2 /*return*/, res.json({ message: "Unable to process order" })];
+        }
+    });
+}); };
+exports.ProcessOrder = ProcessOrder;
+//OFFER CONTROLLER
+var GetOffers = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var user, currentOffer_1, offers;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                user = req.user;
+                if (!user) return [3 /*break*/, 2];
+                currentOffer_1 = Array();
+                return [4 /*yield*/, models_1.Offer.find().populate("vendors")];
+            case 1:
+                offers = _a.sent();
+                if (offers) {
+                    offers.map(function (item) {
+                        if (item.vendors) {
+                            item.vendors.map(function (vendor) {
+                                if (vendor._id.toString() === user._id) {
+                                    currentOffer_1.push(item);
+                                }
+                            });
+                        }
+                        if (item.offerType === "GENERIC") {
+                            currentOffer_1.push(item);
+                        }
+                    });
+                }
+                return [2 /*return*/, res.status(200).json(currentOffer_1)];
+            case 2: return [2 /*return*/, res.json({ message: "Offers Not available" })];
+        }
+    });
+}); };
+exports.GetOffers = GetOffers;
+var AddOffer = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var user, _a, title, description, offerType, offerAmount, pincode, promocode, promoType, startValidity, endValidity, bank, bins, minValue, isActive, vendor, offer;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                user = req.user;
+                if (!user) return [3 /*break*/, 3];
+                _a = req.body, title = _a.title, description = _a.description, offerType = _a.offerType, offerAmount = _a.offerAmount, pincode = _a.pincode, promocode = _a.promocode, promoType = _a.promoType, startValidity = _a.startValidity, endValidity = _a.endValidity, bank = _a.bank, bins = _a.bins, minValue = _a.minValue, isActive = _a.isActive;
+                return [4 /*yield*/, (0, AdminController_1.FindVendor)(user._id)];
+            case 1:
+                vendor = _b.sent();
+                if (!vendor) return [3 /*break*/, 3];
+                return [4 /*yield*/, models_1.Offer.create({
+                        title: title,
+                        description: description,
+                        offerType: offerType,
+                        offerAmount: offerAmount,
+                        pincode: pincode,
+                        promocode: promocode,
+                        promoType: promoType,
+                        startValidity: startValidity,
+                        endValidity: endValidity,
+                        bank: bank,
+                        bins: bins,
+                        isActive: isActive,
+                        minValue: minValue,
+                        vendors: [vendor],
+                    })];
+            case 2:
+                offer = _b.sent();
+                // console.log(offer);
+                return [2 /*return*/, res.status(200).json(offer)];
+            case 3: return [2 /*return*/, res.json({ message: "Unable to add Offer!" })];
+        }
+    });
+}); };
+exports.AddOffer = AddOffer;
+var EditOffer = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var user, offerId, _a, title, description, offerType, offerAmount, pincode, promocode, promoType, startValidity, endValidity, bank, bins, minValue, isActive, currentOffer, vendor, result;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                user = req.user;
+                offerId = req.params.id;
+                if (!user) return [3 /*break*/, 4];
+                _a = req.body, title = _a.title, description = _a.description, offerType = _a.offerType, offerAmount = _a.offerAmount, pincode = _a.pincode, promocode = _a.promocode, promoType = _a.promoType, startValidity = _a.startValidity, endValidity = _a.endValidity, bank = _a.bank, bins = _a.bins, minValue = _a.minValue, isActive = _a.isActive;
+                return [4 /*yield*/, models_1.Offer.findById(offerId)];
+            case 1:
+                currentOffer = _b.sent();
+                if (!currentOffer) return [3 /*break*/, 4];
+                return [4 /*yield*/, (0, AdminController_1.FindVendor)(user._id)];
+            case 2:
+                vendor = _b.sent();
+                if (!vendor) return [3 /*break*/, 4];
+                (currentOffer.title = title),
+                    (currentOffer.description = description),
+                    (currentOffer.offerType = offerType),
+                    (currentOffer.offerAmount = offerAmount),
+                    (currentOffer.pincode = pincode),
+                    (currentOffer.promoType = promoType),
+                    (currentOffer.startValidity = startValidity),
+                    (currentOffer.endValidity = endValidity),
+                    (currentOffer.bank = bank),
+                    (currentOffer.isActive = isActive),
+                    (currentOffer.minValue = minValue);
+                return [4 /*yield*/, currentOffer.save()];
+            case 3:
+                result = _b.sent();
+                return [2 /*return*/, res.status(200).json(result)];
+            case 4: return [2 /*return*/, res.json({ message: "Unable to add Offer!" })];
+        }
+    });
+}); };
+exports.EditOffer = EditOffer;
 //# sourceMappingURL=VendorController.js.map

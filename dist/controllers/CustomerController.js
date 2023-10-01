@@ -36,12 +36,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EditCustomerProfile = exports.GetCustomerProfile = exports.RequestOtp = exports.CustomerVerify = exports.CustomerLogin = exports.CustomerSignUp = void 0;
+exports.CreatePayment = exports.VerifyOffer = exports.DeleteCart = exports.GetCart = exports.AddToCart = exports.GetOrderById = exports.GetOrders = exports.CreateOrder = exports.EditCustomerProfile = exports.GetCustomerProfile = exports.RequestOtp = exports.CustomerVerify = exports.CustomerLogin = exports.CustomerSignUp = void 0;
 var class_transformer_1 = require("class-transformer");
 var class_validator_1 = require("class-validator");
 var dto_1 = require("../dto");
 var utility_1 = require("../utility");
 var models_1 = require("../models");
+//CUSTOMER PROFILE CONTROLLER
 var CustomerSignUp = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
     var customerInputs, validationError, email, phone, password, salt, userPassword, _a, otp, expiry, existingCustomer, result, signature;
     return __generator(this, function (_b) {
@@ -271,4 +272,317 @@ var EditCustomerProfile = function (req, res, next) { return __awaiter(void 0, v
     });
 }); };
 exports.EditCustomerProfile = EditCustomerProfile;
+var assignOrderForDelivery = function (orderId, vendorId) { return __awaiter(void 0, void 0, void 0, function () {
+    var vendor, areaCode, vendorLat, vendorLng, deliveryPerson, currentOrder;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, models_1.Vendor.findById(vendorId)];
+            case 1:
+                vendor = _a.sent();
+                if (!vendor) return [3 /*break*/, 5];
+                areaCode = vendor.pincode;
+                vendorLat = vendor.lat;
+                vendorLng = vendor.lng;
+                return [4 /*yield*/, models_1.DeliveryUser.find({
+                        pincode: areaCode,
+                        verified: true,
+                        isAvailable: true,
+                    })];
+            case 2:
+                deliveryPerson = _a.sent();
+                if (!deliveryPerson) return [3 /*break*/, 5];
+                return [4 /*yield*/, models_1.Order.findById(orderId)];
+            case 3:
+                currentOrder = _a.sent();
+                if (!currentOrder) return [3 /*break*/, 5];
+                //update Delivery ID
+                currentOrder.deliveryId = deliveryPerson[0]._id;
+                return [4 /*yield*/, currentOrder.save()];
+            case 4:
+                _a.sent();
+                _a.label = 5;
+            case 5: return [2 /*return*/];
+        }
+    });
+}); };
+var validateTransaction = function (txnId) { return __awaiter(void 0, void 0, void 0, function () {
+    var currentTransaction;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, models_1.Transaction.findById(txnId)];
+            case 1:
+                currentTransaction = _a.sent();
+                if (currentTransaction) {
+                    if (currentTransaction.status.toLowerCase() !== "failed") {
+                        return [2 /*return*/, { status: true, currentTransaction: currentTransaction }];
+                    }
+                }
+                return [2 /*return*/, { status: false, currentTransaction: currentTransaction }];
+        }
+    });
+}); };
+//ORDER CONTROLLER
+var CreateOrder = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, _a, txnId, amount, items, _b, status_1, currentTransaction, profile, orderId, cart, cartItems_1, netAmount_1, vendorId_1, foods, currentOrder, profileSaveResponse;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                customer = req.user;
+                _a = req.body, txnId = _a.txnId, amount = _a.amount, items = _a.items;
+                if (!customer) return [3 /*break*/, 8];
+                return [4 /*yield*/, validateTransaction(txnId)];
+            case 1:
+                _b = _c.sent(), status_1 = _b.status, currentTransaction = _b.currentTransaction;
+                if (!status_1) {
+                    return [2 /*return*/, res.status(400).json({ message: "Error with Create Order!" })];
+                }
+                return [4 /*yield*/, models_1.Customer.findById(customer._id)];
+            case 2:
+                profile = _c.sent();
+                orderId = "".concat(Math.floor(Math.random() * 89999) + 1000);
+                cart = req.body;
+                cartItems_1 = Array();
+                netAmount_1 = 0.0;
+                return [4 /*yield*/, models_1.Food.find()
+                        .where("_id")
+                        .in(items === null || items === void 0 ? void 0 : items.map(function (item) { return item._id; }))
+                        .exec()];
+            case 3:
+                foods = _c.sent();
+                foods.map(function (food) {
+                    items.map(function (_a) {
+                        var _id = _a._id, unit = _a.unit;
+                        if (food._id == _id) {
+                            vendorId_1 = food.vendorId;
+                            netAmount_1 += food.price * unit;
+                            cartItems_1.push({ food: food, unit: unit });
+                        }
+                    });
+                });
+                if (!cartItems_1) return [3 /*break*/, 8];
+                return [4 /*yield*/, models_1.Order.create({
+                        orderId: orderId,
+                        vendorId: vendorId_1,
+                        items: cartItems_1,
+                        totalAmount: netAmount_1,
+                        paidAmount: amount,
+                        orderDate: new Date(),
+                        orderStatus: "Waiting",
+                        remarks: "",
+                        deliveryId: "",
+                        readyTime: 45,
+                    })];
+            case 4:
+                currentOrder = _c.sent();
+                profile.cart = [];
+                profile.orders.push(currentOrder);
+                currentTransaction.vendorId = vendorId_1;
+                currentTransaction.orderId = orderId;
+                currentTransaction.status = "CONFIRMED";
+                return [4 /*yield*/, currentTransaction.save()];
+            case 5:
+                _c.sent();
+                return [4 /*yield*/, assignOrderForDelivery(currentOrder._id, vendorId_1)];
+            case 6:
+                _c.sent();
+                return [4 /*yield*/, profile.save()];
+            case 7:
+                profileSaveResponse = _c.sent();
+                // return res.status(200).json(currentOrder);
+                return [2 /*return*/, res.status(200).json(profileSaveResponse)];
+            case 8: return [2 /*return*/, res.status(400).json({ msg: "Error while Creating Order" })];
+        }
+    });
+}); };
+exports.CreateOrder = CreateOrder;
+var GetOrders = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, profile;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                customer = req.user;
+                if (!customer) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Customer.findById(customer._id).populate("orders")];
+            case 1:
+                profile = _a.sent();
+                if (profile) {
+                    return [2 /*return*/, res.status(200).json(profile.orders)];
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.status(400).json({ msg: "Orders not found" })];
+        }
+    });
+}); };
+exports.GetOrders = GetOrders;
+var GetOrderById = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var orderId, order;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                orderId = req.params.id;
+                if (!orderId) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Customer.findById(orderId).populate("items.food")];
+            case 1:
+                order = _a.sent();
+                if (order) {
+                    return [2 /*return*/, res.status(200).json(order)];
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.status(400).json({ msg: "Order not found" })];
+        }
+    });
+}); };
+exports.GetOrderById = GetOrderById;
+//CART CONTROLLER
+var AddToCart = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, profile, cartItems, _a, _id_1, unit, food, existingFoodItem, index, cartResult;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                customer = req.user;
+                if (!customer) return [3 /*break*/, 4];
+                return [4 /*yield*/, models_1.Customer.findById(customer._id)];
+            case 1:
+                profile = _b.sent();
+                cartItems = Array();
+                _a = req.body, _id_1 = _a._id, unit = _a.unit;
+                return [4 /*yield*/, models_1.Food.findById(_id_1)];
+            case 2:
+                food = _b.sent();
+                if (!food) return [3 /*break*/, 4];
+                if (!(profile != null)) return [3 /*break*/, 4];
+                cartItems = profile.cart;
+                //check for the cart item
+                if (cartItems.length > 0) {
+                    existingFoodItem = cartItems.filter(function (item) { var _a; return ((_a = item === null || item === void 0 ? void 0 : item.food._id) === null || _a === void 0 ? void 0 : _a.toString()) === _id_1; });
+                    if (existingFoodItem.length > 0) {
+                        index = cartItems.indexOf(existingFoodItem[0]);
+                        if (unit > 0) {
+                            cartItems[index] = { food: food, unit: unit };
+                        }
+                        else {
+                            cartItems.splice(index, 1);
+                        }
+                    }
+                    else {
+                        cartItems.push({ food: food, unit: unit });
+                    }
+                }
+                else {
+                    //add new item to cart
+                    cartItems.push({ food: food, unit: unit });
+                }
+                if (!cartItems) return [3 /*break*/, 4];
+                profile.cart = cartItems;
+                return [4 /*yield*/, profile.save()];
+            case 3:
+                cartResult = _b.sent();
+                return [2 /*return*/, res.status(200).json(cartResult.cart)];
+            case 4: return [2 /*return*/, res.status(400).json({ msg: "Unable to create Cart!" })];
+        }
+    });
+}); };
+exports.AddToCart = AddToCart;
+var GetCart = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, profile;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                customer = req.user;
+                if (!customer) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Customer.findById(customer._id)];
+            case 1:
+                profile = _a.sent();
+                if (profile) {
+                    return [2 /*return*/, res.status(200).json(profile.cart)];
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.status(400).json({ message: "Cart is Empty!" })];
+        }
+    });
+}); };
+exports.GetCart = GetCart;
+var DeleteCart = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, profile, cartResult;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                customer = req.user;
+                if (!customer) return [3 /*break*/, 3];
+                return [4 /*yield*/, models_1.Customer.findById(customer._id)
+                        .populate("cart.food")
+                        .exec()];
+            case 1:
+                profile = _a.sent();
+                if (!(profile != null)) return [3 /*break*/, 3];
+                profile.cart = [];
+                return [4 /*yield*/, profile.save()];
+            case 2:
+                cartResult = _a.sent();
+                return [2 /*return*/, res.status(200).json(cartResult)];
+            case 3: return [2 /*return*/, res.status(400).json({ message: "cart is Already Empty!" })];
+        }
+    });
+}); };
+exports.DeleteCart = DeleteCart;
+//Offer
+var VerifyOffer = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var offerId, customer, appliedOffer;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                offerId = req.params.id;
+                customer = req.user;
+                if (!customer) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Offer.findById(offerId)];
+            case 1:
+                appliedOffer = _a.sent();
+                if (appliedOffer) {
+                    if (appliedOffer.isActive) {
+                        return [2 /*return*/, res
+                                .status(200)
+                                .json({ message: "Offer is Valid", offer: appliedOffer })];
+                    }
+                }
+                _a.label = 2;
+            case 2: return [2 /*return*/, res.status(400).json({ msg: "Offer is Not Valid" })];
+        }
+    });
+}); };
+exports.VerifyOffer = VerifyOffer;
+//payment
+var CreatePayment = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var customer, _a, amount, paymentMode, offerId, payableAmount, appliedOffer, transaction;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                customer = req.user;
+                _a = req.body, amount = _a.amount, paymentMode = _a.paymentMode, offerId = _a.offerId;
+                payableAmount = Number(amount);
+                if (!offerId) return [3 /*break*/, 2];
+                return [4 /*yield*/, models_1.Offer.findById(offerId)];
+            case 1:
+                appliedOffer = _b.sent();
+                if (appliedOffer.isActive) {
+                    payableAmount = payableAmount - appliedOffer.offerAmount;
+                }
+                _b.label = 2;
+            case 2: return [4 /*yield*/, models_1.Transaction.create({
+                    customer: customer._id,
+                    vendorId: "",
+                    orderId: "",
+                    orderValue: payableAmount,
+                    offerUsed: offerId || "NA",
+                    status: "OPEN",
+                    paymentMode: paymentMode,
+                    paymentResponse: "Payment is cash on Delivery",
+                })];
+            case 3:
+                transaction = _b.sent();
+                //return transaction
+                return [2 /*return*/, res.status(200).json(transaction)];
+        }
+    });
+}); };
+exports.CreatePayment = CreatePayment;
 //# sourceMappingURL=CustomerController.js.map
